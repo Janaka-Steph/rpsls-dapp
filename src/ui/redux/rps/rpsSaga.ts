@@ -37,12 +37,13 @@ let onMoveSubmit = (RPSAddress, move, addrPlayerTwo, stake) => {
 }
 function* onMoveSubmitWorker(action) {
   try {
-    const {move, stake} = action.values
+    const {RPSAddress, move, stake} = action.values
     const addrPlayerTwo = yield select((s) => s.rps.addrPlayerTwo)
-    const RPSAddress = yield select((s) => s.ethereum.contracts.RPS.address)
     const tx = yield call(onMoveSubmit, RPSAddress, move, addrPlayerTwo, stake)
     yield call(waitForMined, tx, 'onMoveSubmit') // setInterval until mined
     yield put({type: 'TX_MOVE_SUBMISSION_SUCCEED', tx})
+    // Update RPS contract address
+    yield put({type: 'UPDATE_RPS_CONTRACT_ADDR_SUCCEED', values: {contracts: {$merge: {RPS: {address: RPSAddress}}}}})
     // Update player 2 balance
     yield delay(5000)
     yield put({type: 'P2_BALANCE_REQUESTED'})

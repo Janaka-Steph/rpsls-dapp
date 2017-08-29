@@ -19,6 +19,17 @@ let MoveForm = (props) => {
   return (
     <div id="MoveForm" className="form">
       <Form onSubmit={handleSubmit(onSubmit)}>
+        <div className="row">
+          <div className="col-12">
+            <Field
+              component={Input}
+              label="RPSAddress"
+              name="RPSAddress"
+              placeholder="Enter the RPS contract address"
+              type="text"
+            />
+          </div>
+        </div>
 
         <MoveChoices/>
 
