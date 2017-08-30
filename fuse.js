@@ -12,9 +12,9 @@ const POSTCSS_PLUGINS = [
     browsers: ['ie >= 11', 'last 2 versions'],
   }),
 ]
-// const outputName = isProduction ? '$name.min.js' : '$name.js'
+
 // Producer
-const fuse = FuseBox.init({
+const fuseConfig = {
   alias: {
     'reactstrap-tether': '', // todo Remove this hack to fix import of reactstrap-tether
     '../../customModules/protocol/index.js': 'protocol/index.js', // hack to have working path for app and tests
@@ -41,51 +41,69 @@ const fuse = FuseBox.init({
     }), CSSPlugin()],
     JSONPlugin(),
     WebIndexPlugin({
-      //bundles: ['assets/bundle.min.js'],
+      //bundles: ['client.min.js'],
       template: 'src/ui/index.html',
-      path: '.',
-    }),
-    isProduction && QuantumPlugin({
-      api: (core) => {
-        core.solveComputed('bn.js/lib/bn.js') //todo Remove when BN fix it
-      },
-      bakeApiIntoBundle: 'assets/bundle.min.js',
-      ensureES5: true,
-      removeExportsInterop: false,
-      target: 'universal',
-      treeshake: true,
-      uglify: true,
-    }),
+      path: './static',
+    })
   ],
   sourceMaps: !isProduction,
   // target: 'browser',
   useJsNext: false,
-})
+}
+const fuse = FuseBox.init(fuseConfig)
+
+const quantumConfig = {
+  api: (core) => {
+    core.solveComputed('bn.js/lib/bn.js') //todo Remove when BN fix it
+  },
+  containedAPI: true,
+  bakeApiIntoBundle: 'client.min.js',
+  ensureES5: true,
+  removeExportsInterop: false,
+  target: 'browser',
+  treeshake: true,
+  uglify: true,
+}
+
 // Tasks
 Sparky.task('clean-cache', () => Sparky.src('.fusebox/*').clean('.fusebox/'))
-Sparky.task('default', ['clean', 'copy-assets', 'run'], () => {})
+Sparky.task('default', ['clean', 'copy-assets', 'prod'], () => {})
 Sparky.task('clean', () => Sparky.src(path.resolve('build')).clean(path.resolve('build')))
 Sparky.task('copy-assets', () => Sparky.src('assets/**/**.*', {base: './src/ui'}).dest('build'))
-Sparky.task('run', () => {
-  if (isProduction) {
-    fuse.bundle('assets/bundle.min.js')
-      .watch('server/**') // watch only server related code
-      .instructions('> [../server.ts]')
-      // Execute process right after bundling is completed
-      // launch and restart express
-      .completed(proc => proc.start())
-  }
-  else {
+
+Sparky.task('prod', () => {
+  const fuseServer = FuseBox.init(fuseConfig)
+
+  fuseServer.bundle('server.js')
+    .instructions('> [server/server.ts]')
+  // Execute process right after bundling is completed
+  // launch and restart express
+  // .completed(proc => proc.start())
+
+  fuseServer.run().then(() => {
+    const fuseClientOpts = Object.assign({}, fuseConfig)
+    fuseClientOpts.plugins.push(QuantumPlugin(quantumConfig))
+    const fuseClient = FuseBox.init(fuseClientOpts)
+
+    fuseClient.bundle('client.min.js')
+      .target('browser')
+      .instructions(`> ui/index.tsx`)
+
+    fuseClient.run()
+  })
+})
+
+Sparky.task('dev', () => {
     fuse.dev({open: false, port: 8085, root: 'build'}, server => {
       const app = server.httpServer.app
       app.use('/assets/', express.static(path.resolve('build', 'assets')))
       app.get('*', (req, res) => res.sendFile(path.resolve('build', 'index.html')))
     })
-    fuse.bundle('assets/app')
+    fuse.bundle('client.js')
       .target('browser')
-      .instructions(`>ui/index.tsx`)
+      .instructions(`> ui/index.tsx`)
       .hmr()
       .watch()
-  }
-  fuse.run()
+
+    fuse.run()
 })
