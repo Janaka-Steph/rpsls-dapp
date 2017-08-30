@@ -19,7 +19,7 @@
   },
   "author": "Stéphane Roche <rstephane@protonmail.com>",
   "license": "MIT",
-  "devDependencies": {
+  "dependencies": {
     "@types/jest": "^20.0.7",
     "@types/node": "^8.0.24",
     "@types/react-redux": "^5.0.4",
@@ -56,9 +56,6 @@
     "web3": "^0.20.1",
     "web3-provider-engine": "^13.2.9",
     "zeppelin-solidity": "^1.2.0"
-  },
-  "dependencies": {
-    "fuse-box": "^2.2.3-beta.14"
   },
   "engines": {
     "node": "8.2.1"
