@@ -57,6 +57,9 @@
     "web3-provider-engine": "^13.2.9",
     "zeppelin-solidity": "^1.2.0"
   },
+  "dependencies": {
+    "fuse-box": "^2.2.3-beta.14"
+  },
   "engines": {
     "node": "8.2.1"
   }
