@@ -61,10 +61,12 @@ const quantumConfig = {
 }
 // Tasks
 Sparky.task('clean-cache', () => Sparky.src('.fusebox/*').clean('.fusebox/'))
-Sparky.task('default', ['clean', 'copy-assets', 'dev'], () => {})
-Sparky.task('clean', () => Sparky.src(path.resolve('build')).clean(path.resolve('build')))
+Sparky.task('clean', () => Sparky.src('build').clean('build'))
 Sparky.task('copy-assets', () => Sparky.src('assets/**/**.*', {base: './src/ui'}).dest('build'))
-Sparky.task('prod', () => {
+Sparky.task('default', ['clean', 'copy-assets', 'devTask'], () => {})
+Sparky.task('prod', ['clean', 'copy-assets', 'prodTask'], () => {})
+
+Sparky.task('prodTask', () => {
   const fuseServer = FuseBox.init(fuseConfig)
   fuseServer.bundle('server.js')
     .instructions('> [server/server.ts]')
@@ -79,7 +81,7 @@ Sparky.task('prod', () => {
       fuseClient.run()
     })
 })
-Sparky.task('dev', () => {
+Sparky.task('devTask', () => {
   fuse.dev({open: false, port: 8085, root: 'build'}, server => {
     const app = server.httpServer.app
     app.use('/assets', express.static(path.resolve('build', 'assets')))
