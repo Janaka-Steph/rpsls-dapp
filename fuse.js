@@ -12,7 +12,6 @@ const POSTCSS_PLUGINS = [
     browsers: ['ie >= 11', 'last 2 versions'],
   }),
 ]
-
 // Producer
 const fuseConfig = {
   alias: {
@@ -22,7 +21,7 @@ const fuseConfig = {
   },
   cache: !isProduction,
   debug: true,
-  experimentalFeatures: true, // remove next major release of fb
+  experimentalFeatures: true, // remove next major release of fb - v3
   homeDir: 'src',
   //ignoreModules : [],
   log: true,
@@ -41,69 +40,56 @@ const fuseConfig = {
     }), CSSPlugin()],
     JSONPlugin(),
     WebIndexPlugin({
-      //bundles: ['client.min.js'],
       template: 'src/ui/index.html',
       path: './static',
     })
   ],
   sourceMaps: !isProduction,
-  // target: 'browser',
   useJsNext: false,
 }
 const fuse = FuseBox.init(fuseConfig)
-
 const quantumConfig = {
   api: (core) => {
     core.solveComputed('bn.js/lib/bn.js') //todo Remove when BN fix it
   },
-  containedAPI: true,
   bakeApiIntoBundle: 'client.min.js',
   ensureES5: true,
+  manifest : true,
   removeExportsInterop: false,
   target: 'browser',
   treeshake: true,
   uglify: true,
 }
-
 // Tasks
 Sparky.task('clean-cache', () => Sparky.src('.fusebox/*').clean('.fusebox/'))
 Sparky.task('default', ['clean', 'copy-assets', 'prod'], () => {})
 Sparky.task('clean', () => Sparky.src(path.resolve('build')).clean(path.resolve('build')))
 Sparky.task('copy-assets', () => Sparky.src('assets/**/**.*', {base: './src/ui'}).dest('build'))
-
 Sparky.task('prod', () => {
   const fuseServer = FuseBox.init(fuseConfig)
-
   fuseServer.bundle('server.js')
     .instructions('> [server/server.ts]')
-  // Execute process right after bundling is completed
-  // launch and restart express
-  // .completed(proc => proc.start())
-
-  fuseServer.run().then(() => {
-    const fuseClientOpts = Object.assign({}, fuseConfig)
-    fuseClientOpts.plugins.push(QuantumPlugin(quantumConfig))
-    const fuseClient = FuseBox.init(fuseClientOpts)
-
-    fuseClient.bundle('client.min.js')
-      .target('browser')
-      .instructions(`> ui/index.tsx`)
-
-    fuseClient.run()
-  })
-})
-
-Sparky.task('dev', () => {
-    fuse.dev({open: false, port: 8085, root: 'build'}, server => {
-      const app = server.httpServer.app
-      app.use('/assets/', express.static(path.resolve('build', 'assets')))
-      app.get('*', (req, res) => res.sendFile(path.resolve('build', 'index.html')))
+  fuseServer.run()
+    .then(() => {
+      const fuseClientOpts = Object.assign({}, fuseConfig)
+      fuseClientOpts.plugins.push(QuantumPlugin(quantumConfig))
+      const fuseClient = FuseBox.init(fuseClientOpts)
+      fuseClient.bundle('client.min.js')
+        .target('browser')
+        .instructions(`> ui/index.tsx`)
+      fuseClient.run()
     })
-    fuse.bundle('client.js')
-      .target('browser')
-      .instructions(`> ui/index.tsx`)
-      .hmr()
-      .watch()
-
-    fuse.run()
+})
+Sparky.task('dev', () => {
+  fuse.dev({open: false, port: 8085, root: 'build'}, server => {
+    const app = server.httpServer.app
+    app.use('/assets/', express.static(path.resolve('build', 'assets')))
+    app.get('*', (req, res) => res.sendFile(path.resolve('build', 'index.html')))
+  })
+  fuse.bundle('client.js')
+    .target('browser')
+    .instructions(`> ui/index.tsx`)
+    .hmr()
+    .watch()
+  fuse.run()
 })
