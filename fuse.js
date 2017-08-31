@@ -26,7 +26,6 @@ const fuseConfig = {
   //ignoreModules : [],
   log: true,
   modulesFolder: 'customModules',
-  //output: `build/${outputName}`,
   output: 'build/$name.js',
   plugins: [
     EnvPlugin({
@@ -41,7 +40,7 @@ const fuseConfig = {
     JSONPlugin(),
     WebIndexPlugin({
       template: 'src/ui/index.html',
-      path: './static',
+      path: '.',
     })
   ],
   sourceMaps: !isProduction,
@@ -62,7 +61,7 @@ const quantumConfig = {
 }
 // Tasks
 Sparky.task('clean-cache', () => Sparky.src('.fusebox/*').clean('.fusebox/'))
-Sparky.task('default', ['clean', 'copy-assets', 'prod'], () => {})
+Sparky.task('default', ['clean', 'copy-assets', 'dev'], () => {})
 Sparky.task('clean', () => Sparky.src(path.resolve('build')).clean(path.resolve('build')))
 Sparky.task('copy-assets', () => Sparky.src('assets/**/**.*', {base: './src/ui'}).dest('build'))
 Sparky.task('prod', () => {
@@ -83,10 +82,11 @@ Sparky.task('prod', () => {
 Sparky.task('dev', () => {
   fuse.dev({open: false, port: 8085, root: 'build'}, server => {
     const app = server.httpServer.app
-    app.use('/assets/', express.static(path.resolve('build', 'assets')))
+    app.use('/assets', express.static(path.resolve('build', 'assets')))
+    app.get('/client.js', (req, res) => res.sendFile(path.resolve('build', 'client.js')))
     app.get('*', (req, res) => res.sendFile(path.resolve('build', 'index.html')))
   })
-  fuse.bundle('client.js')
+  fuse.bundle('client')
     .target('browser')
     .instructions(`> ui/index.tsx`)
     .hmr()
