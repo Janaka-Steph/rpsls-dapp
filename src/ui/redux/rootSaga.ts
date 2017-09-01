@@ -28,7 +28,7 @@ export default function* rootSaga() {
     fork(watchGetBlockNumber),
     fork(user),
     fork(bootstrap),
-    //call(watchDefaultAccountChange),
+    call(watchDefaultAccountChange),
     // Others
     call(rps),
   ])

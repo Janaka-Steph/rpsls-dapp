@@ -2,22 +2,42 @@
 // RPS Sagas
 // ========================================================
 import {delay} from 'redux-saga'
-import {call, put, select, takeEvery} from 'redux-saga/lib/effects.js'
+import {call, put, race, select, take, takeEvery} from 'redux-saga/lib/effects.js'
 import waitForMined from '../../helpers/waitForMined'
 import {contracts} from '../../blockchainConnect'
 // ========================================================
+// On generate hash submission
+// ========================================================
+let onGenerateHash = (move, salt) => {
+  const {Hasher}: any = contracts
+  return Hasher.hash(move, salt)
+}
+function* onGenerateHashWorker(action) {
+  try {
+    const {move} = action.values
+    const salt = window.crypto.getRandomValues(new Uint32Array(1))[0]
+    const hash = yield call(onGenerateHash, move, salt)
+    yield put({type: 'GENERATE_HASH_SUBMISSION_SUCCEED', values: {hash, salt}})
+  } catch (e) {
+    yield put({type: 'GENERATE_HASH_SUBMISSION_FAILED', e: e.message})
+  }
+}
+// ========================================================
 // RPS Deploy submission
 // ========================================================
-let onRPSDeploySubmit = (c1Hash, addrPlayerTwo, stake) => {
+let onRPSDeploySubmit = (hash, addrPlayerTwo, stake) => {
   const {RPS}: any = contracts
-  return RPS.new(c1Hash, addrPlayerTwo, {from: window.web3.eth.defaultAccount, gas: 4000000, value: web3.toWei(stake, 'ether')})
+  return RPS.new(hash, addrPlayerTwo, {from: window.web3.eth.defaultAccount, gas: 1000000, value: web3.toWei(stake, 'ether')})
 }
 function* onRPSDeploySubmitWorker(action) {
   try {
-    const {c1Hash, addrPlayerTwo, stake} = action.values
-    const RPSInstance = yield call(onRPSDeploySubmit, c1Hash, addrPlayerTwo, stake)
+    const {addrPlayerTwo, move, stake} = action.values
+    yield put({type: 'GENERATE_HASH_SUBMISSION_REQUESTED', values: {move}})
+    const {error, success} = yield race({success: take('GENERATE_HASH_SUBMISSION_SUCCEED'), error: take('GENERATE_HASH_SUBMISSION_FAILED')})
+    if (error) throw new Error(error)
+    const RPSInstance = yield call(onRPSDeploySubmit, success.values.hash, addrPlayerTwo, stake)
     yield call(waitForMined, RPSInstance.transactionHash, 'onRPSDeploySubmit')
-    yield put({type: 'TX_RPS_DEPLOY_SUBMISSION_SUCCEED', tx: RPSInstance.transactionHash, values: {c1Hash, addrPlayerTwo}})
+    yield put({type: 'TX_RPS_DEPLOY_SUBMISSION_SUCCEED', tx: RPSInstance.transactionHash, values: {addrPlayerTwo}})
     // Update RPS contract address
     yield put({type: 'UPDATE_RPS_CONTRACT_ADDR_SUCCEED', values: {contracts: {$merge: {RPS: {address: RPSInstance.address}}}}})
     // Update player's balances
@@ -60,8 +80,9 @@ let onSolveSubmit = (RPSAddress, move, salt) => {
 }
 function* onSolveSubmitWorker(action) {
   try {
-    const {move, salt} = action.values
+    const {move} = action.values
     const RPSAddress = yield select((s) => s.ethereum.contracts.RPS.address)
+    const salt = yield select((s) => s.rps.salt)
     const tx = yield call(onSolveSubmit, RPSAddress, move, salt)
     yield call(waitForMined, tx, 'onSolveSubmit') // setInterval until mined
     yield put({type: 'TX_SOLVE_SUBMISSION_SUCCEED', tx})
@@ -74,58 +95,42 @@ function* onSolveSubmitWorker(action) {
   }
 }
 // ========================================================
-// On generate hash submission
+// Timeout submission - Triggered by P1
 // ========================================================
-let onGenerateHash = (move, salt) => {
-  const {Hasher}: any = contracts
-  return Hasher.hash(move, salt)
-}
-function* onGenerateHashWorker(action) {
-  try {
-    const {move, salt} = action.values
-    const hash = yield call(onGenerateHash, move, salt)
-    yield put({type: 'GENERATE_HASH_SUBMISSION_SUCCEED', values: {hash}})
-  } catch (e) {
-    yield put({type: 'GENERATE_HASH_SUBMISSION_FAILED', e: e.message})
-  }
-}
-// ========================================================
-// Timeout submission - Triggered by P2
-// ========================================================
-let onP1Timeout = (RPSAddress, addrPlayerTwo) => {
+let onP1Timeout = (RPSAddress) => {
   const {RPS}: any = contracts
-  return RPS.at(RPSAddress).j1Timeout.sendTransaction({from: addrPlayerTwo, gas: 4000000})
+  return RPS.at(RPSAddress).j2Timeout.sendTransaction({from: window.web3.eth.defaultAccount, gas: 1000000})
 }
 function* onP1TimeoutWorker() {
   try {
-    const addrPlayerTwo = yield select((s) => s.rps.addrPlayerTwo)
     const RPSAddress = yield select((s) => s.ethereum.contracts.RPS.address)
-    const tx = yield call(onP1Timeout, RPSAddress, addrPlayerTwo)
+    const tx = yield call(onP1Timeout, RPSAddress)
     yield call(waitForMined, tx, 'onP1Timeout')
     yield put({type: 'TX_P1_TIMEOUT_SUBMISSION_SUCCEED', tx})
-    // Update player 2 balance
+    // Update player 1 balance
     yield delay(5000)
-    yield put({type: 'P2_BALANCE_REQUESTED'})
+    yield put({type: 'USER_BALANCE_REQUESTED'})
   } catch (e) {
     yield put({type: 'TX_P1_TIMEOUT_SUBMISSION_FAILED', e: e.message})
   }
 }
 // ========================================================
-// Timeout submission - Triggered by P1
+// Timeout submission - Triggered by P2
 // ========================================================
-let onP2Timeout = (RPSAddress) => {
+let onP2Timeout = (RPSAddress, addrPlayerTwo) => {
   const {RPS}: any = contracts
-  return RPS.at(RPSAddress).j2Timeout.sendTransaction({from: window.web3.eth.defaultAccount, gas: 4000000})
+  return RPS.at(RPSAddress).j1Timeout.sendTransaction({from: addrPlayerTwo, gas: 1000000})
 }
 function* onP2TimeoutWorker() {
   try {
+    const addrPlayerTwo = yield select((s) => s.rps.addrPlayerTwo)
     const RPSAddress = yield select((s) => s.ethereum.contracts.RPS.address)
-    const tx = yield call(onP2Timeout, RPSAddress)
+    const tx = yield call(onP2Timeout, RPSAddress, addrPlayerTwo)
     yield call(waitForMined, tx, 'onP2Timeout')
     yield put({type: 'TX_P2_TIMEOUT_SUBMISSION_SUCCEED', tx})
-    // Update player 1 balance
+    // Update player 2 balance
     yield delay(5000)
-    yield put({type: 'USER_BALANCE_REQUESTED'})
+    yield put({type: 'P2_BALANCE_REQUESTED'})
   } catch (e) {
     yield put({type: 'TX_P2_TIMEOUT_SUBMISSION_FAILED', e: e.message})
   }

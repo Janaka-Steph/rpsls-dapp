@@ -4,15 +4,15 @@ import {Route} from 'react-router-dom'
 import {Provider} from 'react-redux'
 import {ConnectedRouter} from 'react-router-redux'
 import {history} from '../../redux/createStore'
-import TopBar from '../../components/common/TopBar'
 // Pages
 import HomePage from '../HomeContainer'
-import RPSPage from '../RPSContainer'
+import StartGamePage from '../StartGameContainer'
+import JoinGamePage from '../JoinGameContainer'
 
-interface State {}
 interface Props {
-  store: any;
+  store: any
 }
+interface State {}
 
 /**
  * RootContainer
@@ -28,13 +28,13 @@ class RootContainer extends React.Component<Props, State> {
       <Provider store={this.props.store}>
         <ConnectedRouter history={history}>
           <div>
-            <TopBar />
             <div className="container m-top-50">
               <div className="row">
                 <div className="col-12">
                   <div>
                     <Route exact path="/" component={HomePage}/>
-                    <Route exact path="/rps" component={RPSPage}/>
+                    <Route exact path="/start-game" component={StartGamePage}/>
+                    <Route exact path="/join-game" component={JoinGamePage}/>
                   </div>
                 </div>
               </div>

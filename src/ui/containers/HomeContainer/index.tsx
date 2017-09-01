@@ -1,5 +1,7 @@
 import * as React from 'react'
 import {connect} from 'react-redux'
+import {Button} from 'reactstrap'
+import {history} from '../../redux/createStore'
 import Info from '../../components/common/Info'
 
 /**
@@ -18,7 +20,32 @@ let HomePage = (props) => {
     <div id="home-page">
       <div className="row">
         <div className="col">
-          <h2>Welcome to Dapp Boilerplate</h2>
+          <h2>Welcome to the Rock-Paper-Scissor-Lizard-Spoke Ethereum Dapp Game</h2>
+        </div>
+      </div>
+
+      <div className="row m-top-50 m-btm-50">
+        <div className="col-6">
+          <Button
+            block
+            color="primary"
+            onClick={() => history.push('/start-game')}
+            outline
+            size="lg"
+          >
+            {'Start a new game'}
+          </Button>
+        </div>
+        <div className="col-6">
+          <Button
+            block
+            color="primary"
+            onClick={() => history.push('/join-game')}
+            outline
+            size="lg"
+          >
+            {'Join a game'}
+          </Button>
         </div>
       </div>
 

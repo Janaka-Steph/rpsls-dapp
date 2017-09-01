@@ -4,7 +4,7 @@
   "description": "Dapp boilerplate",
   "scripts": {
     "cleanCache": "node fuse clean-cache",
-    "dev": "NETWORK=testrpc node fuse",
+    "dev": "npm run cleanCache && NETWORK=testrpc node fuse",
     "devTestnet": "NETWORK=testnet npm run dev",
     "migrate": "cd customModules/protocol && NETWORK=testrpc truffle migrate",
     "migrateTestnet": "cd customModules/protocol && NETWORK=testnet truffle migrate --network kovan",
@@ -27,7 +27,7 @@
     "classnames": "^2.2.5",
     "dotenv": "^4.0.0",
     "ethereumjs-wallet": "^0.6.0",
-    "fuse-box": "^2.2.3-beta.14",
+    "fuse-box": "^2.2.2",
     "immutability-helper": "^2.3.1",
     "jest": "^20.0.4",
     "postcss-cssnext": "^3.0.2",

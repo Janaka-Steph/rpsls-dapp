@@ -2,6 +2,7 @@ import * as React from 'react'
 import {Button, Form} from 'reactstrap'
 import {Field, reduxForm, reset} from 'redux-form'
 import {Input} from '../common/Inputs'
+import MoveChoices from '../MoveChoices'
 // ------------------------------------
 // Validation
 // ------------------------------------
@@ -30,17 +31,7 @@ let RPSDeployForm = (props) => {
   return (
     <div id="RPSDeployForm" className="form">
       <Form onSubmit={handleSubmit(onSubmit)}>
-        <div className="row">
-          <div className="col-12">
-            <Field
-              component={Input}
-              label="c1Hash"
-              name="c1Hash"
-              placeholder="Enter the commitment hash"
-              type="text"
-            />
-          </div>
-        </div>
+        <MoveChoices />
 
         <div className="row">
           <div className="col-12">
